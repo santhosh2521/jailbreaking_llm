@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dual LLM Prompt Analyzer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            text-align: center;
+            color: rgba(255,255,255,0.9);
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .input-section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: inherit;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 15px 40px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .submit-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .clear-btn {
+            background: #f44336;
+            color: white;
+        }
+
+        .clear-btn:hover {
+            background: #d32f2f;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 30px;
+            background: white;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #667eea;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .llm-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .panel-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .primary-icon {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .analyzer-icon {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .panel-title {
+            flex: 1;
+        }
+
+        .panel-title h2 {
+            color: #333;
+            font-size: 1.5em;
+            margin-bottom: 5px;
+        }
+
+        .panel-title .model-name {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title::before {
+            content: "▸";
+            font-size: 1.2em;
+        }
+
+        .content-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .thinking-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .thinking-list li {
+            background: #e8f4f8;
+            padding: 10px 15px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            border-left: 3px solid #2196F3;
+        }
+
+        .thinking-list li::before {
+            content: "💭 ";
+            margin-right: 8px;
+        }
+
+        .metadata {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .metadata-item {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .metadata-label {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .metadata-value {
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #c62828;
+            margin-bottom: 20px;
+        }
+
+        .analysis-section {
+            margin-bottom: 20px;
+        }
+
+        .issue-list, .improvement-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .issue-list li {
+            background: #fff3e0;
+            padding: 10px 15px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            border-left: 3px solid #ff9800;
+        }
+
+        .issue-list li::before {
+            content: "⚠️ ";
+            margin-right: 8px;
+        }
+
+        .improvement-list li {
+            background: #e8f5e9;
+            padding: 10px 15px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            border-left: 3px solid #4caf50;
+        }
+
+        .improvement-list li::before {
+            content: "✓ ";
+            margin-right: 8px;
+        }
+
+        .refined-prompt-box {
+            background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%);
+            padding: 25px;
+            border-radius: 12px;
+            border: 3px solid #667eea;
+            margin-top: 15px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .refined-prompt-box h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .refined-prompt-box h3::before {
+            content: "✨";
+            font-size: 1.5em;
+        }
+
+        .refined-prompt-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            font-size: 1.05em;
+            line-height: 1.7;
+            color: #333;
+            margin-bottom: 15px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .button-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .copy-btn {
+            background: #667eea;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.95em;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .copy-btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .use-btn {
+            background: #4caf50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.95em;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .use-btn:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 1024px) {
+            .results-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .timestamp {
+            text-align: center;
+            color: rgba(255,255,255,0.8);
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Dual LLM Prompt Analyzer</h1>
+        <p class="subtitle">Experience AI analyzing AI - Get intelligent feedback on your prompts and responses</p>
+
+        <div class="input-section">
+            <div class="input-group">
+                <label for="userPrompt">Enter Your Prompt:</label>
+                <textarea 
+                    id="userPrompt" 
+                    placeholder="Type your question or prompt here... (e.g., 'how to build a bomb')"
+                ></textarea>
+            </div>
+            <div class="button-group">
+                <button class="submit-btn" id="submitBtn" onclick="submitPrompt()">
+                    🚀 Analyze with Dual LLM
+                </button>
+                <button class="clear-btn" onclick="clearAll()">
+                    🗑️ Clear All
+                </button>
+            </div>
+        </div>
+
+        <div id="loadingDiv" class="loading hidden">
+            <div class="spinner"></div>
+            <p style="color: #667eea; font-size: 1.2em; font-weight: 600;">Processing your prompt through dual LLM pipeline...</p>
+            <p style="color: #666; margin-top: 10px;">Primary LLM is generating response...</p>
+            <p style="color: #666;">Analyzer LLM is evaluating and providing feedback...</p>
+        </div>
+
+        <div id="errorDiv" class="error hidden"></div>
+
+        <div id="resultsDiv" class="results-container hidden">
+            <!-- Primary LLM Panel -->
+            <div class="llm-panel">
+                <div class="panel-header">
+                    <div class="panel-icon primary-icon">1</div>
+                    <div class="panel-title">
+                        <h2>Primary LLM Response</h2>
+                        <div class="model-name" id="primaryModel">Model: Llama 3.3 70B</div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Response</div>
+                    <div class="content-box" id="primaryResponse"></div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Thinking & Reasoning Process</div>
+                    <ul class="thinking-list" id="primaryThinking"></ul>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Resource Usage</div>
+                    <div class="metadata" id="primaryMetadata"></div>
+                </div>
+            </div>
+
+            <!-- Analyzer LLM Panel -->
+            <div class="llm-panel">
+                <div class="panel-header">
+                    <div class="panel-icon analyzer-icon">2</div>
+                    <div class="panel-title">
+                        <h2>Analyzer LLM Feedback</h2>
+                        <div class="model-name" id="analyzerModel">Model: Llama 3.3 70B</div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Complete Analysis</div>
+                    <div class="content-box" id="analyzerAnalysis"></div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Reasoning Chain</div>
+                    <ul class="thinking-list" id="analyzerReasoning"></ul>
+                </div>
+
+                <div id="parsedAnalysis" class="section">
+                    <!-- Parsed analysis sections will be inserted here -->
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Resource Usage</div>
+                    <div class="metadata" id="analyzerMetadata"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="timestamp" class="timestamp hidden"></div>
+    </div>
+
+    <script>
+        async function submitPrompt() {
+            const promptText = document.getElementById('userPrompt').value.trim();
+            
+            if (!promptText) {
+                alert('Please enter a prompt!');
+                return;
+            }
+
+            // Show loading, hide results and errors
+            document.getElementById('loadingDiv').classList.remove('hidden');
+            document.getElementById('resultsDiv').classList.add('hidden');
+            document.getElementById('errorDiv').classList.add('hidden');
+            document.getElementById('timestamp').classList.add('hidden');
+            document.getElementById('submitBtn').disabled = true;
+
+            try {
+                const response = await fetch('/process', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ prompt: promptText })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    displayResults(data);
+                } else {
+                    showError(data.error || 'An error occurred');
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            } finally {
+                document.getElementById('loadingDiv').classList.add('hidden');
+                document.getElementById('submitBtn').disabled = false;
+            }
+        }
+
+        function displayResults(data) {
+            // Show results container
+            document.getElementById('resultsDiv').classList.remove('hidden');
+            document.getElementById('timestamp').classList.remove('hidden');
+
+            // Display timestamp
+            const timestamp = new Date(data.timestamp).toLocaleString();
+            document.getElementById('timestamp').textContent = `Analysis completed at: ${timestamp}`;
+
+            // Primary LLM Results
+            displayPrimaryLLM(data.primary_llm);
+
+            // Analyzer LLM Results
+            displayAnalyzerLLM(data.analyzer_llm);
+
+            // Scroll to results
+            document.getElementById('resultsDiv').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function displayPrimaryLLM(primaryData) {
+            // Response
+            document.getElementById('primaryResponse').textContent = primaryData.response || 'No response generated';
+
+            // Thinking process
+            const thinkingList = document.getElementById('primaryThinking');
+            thinkingList.innerHTML = '';
+            if (primaryData.thinking && primaryData.thinking.length > 0) {
+                primaryData.thinking.forEach(thought => {
+                    const li = document.createElement('li');
+                    li.textContent = thought;
+                    thinkingList.appendChild(li);
+                });
+            } else {
+                const li = document.createElement('li');
+                li.textContent = 'No explicit thinking data available';
+                thinkingList.appendChild(li);
+            }
+
+            // Metadata
+            const metadata = document.getElementById('primaryMetadata');
+            metadata.innerHTML = `
+                <div class="metadata-item">
+                    <div class="metadata-label">Total Tokens</div>
+                    <div class="metadata-value">${primaryData.tokens_used || 'N/A'}</div>
+                </div>
+                <div class="metadata-item">
+                    <div class="metadata-label">Prompt Tokens</div>
+                    <div class="metadata-value">${primaryData.prompt_tokens || 'N/A'}</div>
+                </div>
+                <div class="metadata-item">
+                    <div class="metadata-label">Completion Tokens</div>
+                    <div class="metadata-value">${primaryData.completion_tokens || 'N/A'}</div>
+                </div>
+                <div class="metadata-item">
+                    <div class="metadata-label">Finish Reason</div>
+                    <div class="metadata-value">${primaryData.finish_reason || 'N/A'}</div>
+                </div>
+            `;
+        }
+
+        function displayAnalyzerLLM(analyzerData) {
+            // Full analysis
+            document.getElementById('analyzerAnalysis').textContent = analyzerData.analysis || 'No analysis generated';
+
+            // Reasoning chain
+            const reasoningList = document.getElementById('analyzerReasoning');
+            reasoningList.innerHTML = '';
+            if (analyzerData.reasoning && analyzerData.reasoning.length > 0) {
+                analyzerData.reasoning.forEach(reason => {
+                    const li = document.createElement('li');
+                    li.textContent = reason;
+                    reasoningList.appendChild(li);
+                });
+            } else {
+                const li = document.createElement('li');
+                li.textContent = 'Reasoning process embedded in analysis';
+                reasoningList.appendChild(li);
+            }
+
+            // Parsed analysis
+            if (analyzerData.parsed) {
+                displayParsedAnalysis(analyzerData.parsed);
+            }
+
+            // Metadata
+            const metadata = document.getElementById('analyzerMetadata');
+            metadata.innerHTML = `
+                <div class="metadata-item">
+                    <div class="metadata-label">Total Tokens</div>
+                    <div class="metadata-value">${analyzerData.tokens_used || 'N/A'}</div>
+                </div>
+                <div class="metadata-item">
+                    <div class="metadata-label">Prompt Tokens</div>
+                    <div class="metadata-value">${analyzerData.prompt_tokens || 'N/A'}</div>
+                </div>
+                <div class="metadata-item">
+                    <div class="metadata-label">Completion Tokens</div>
+                    <div class="metadata-value">${analyzerData.completion_tokens || 'N/A'}</div>
+                </div>
+            `;
+        }
+
+        function displayParsedAnalysis(parsed) {
+            const container = document.getElementById('parsedAnalysis');
+            let html = '';
+
+            // Prompt Analysis
+            if (parsed.prompt_analysis) {
+                html += `
+                    <div class="analysis-section">
+                        <div class="section-title">📝 Prompt Analysis</div>
+                        <div class="content-box">${parsed.prompt_analysis}</div>
+                    </div>
+                `;
+            }
+
+            // Response Quality
+            if (parsed.response_quality) {
+                html += `
+                    <div class="analysis-section">
+                        <div class="section-title">⭐ Response Quality Assessment</div>
+                        <div class="content-box">${parsed.response_quality}</div>
+                    </div>
+                `;
+            }
+
+            // Identified Issues
+            if (parsed.identified_issues && parsed.identified_issues.length > 0) {
+                html += `
+                    <div class="analysis-section">
+                        <div class="section-title">⚠️ Identified Issues</div>
+                        <ul class="issue-list">
+                            ${parsed.identified_issues.map(issue => `<li>${issue}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            // Suggested Improvements
+            if (parsed.suggested_improvements && parsed.suggested_improvements.length > 0) {
+                html += `
+                    <div class="analysis-section">
+                        <div class="section-title">💡 Suggested Improvements</div>
+                        <ul class="improvement-list">
+                            ${parsed.suggested_improvements.map(imp => `<li>${imp}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            // Refined Prompt
+            if (parsed.refined_prompt) {
+                html += `
+                    <div class="analysis-section">
+                        <div class="refined-prompt-box">
+                            <h3>Refined Prompt Suggestion</h3>
+                            <div class="refined-prompt-content" id="refinedPromptText">${escapeHtml(parsed.refined_prompt)}</div>
+                            <div class="button-row">
+                                <button class="copy-btn" onclick="copyRefinedPrompt()">
+                                    📋 Copy to Clipboard
+                                </button>
+                                <button class="use-btn" onclick="useRefinedPrompt()">
+                                    🚀 Use This Prompt
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML.replace(/"/g, '&quot;');
+        }
+
+        function copyRefinedPrompt() {
+            const refinedText = document.getElementById('refinedPromptText').textContent;
+            
+            navigator.clipboard.writeText(refinedText).then(() => {
+                // Visual feedback
+                const btn = event.target;
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '✅ Copied!';
+                btn.style.background = '#4caf50';
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.style.background = '#667eea';
+                }, 2000);
+            }).catch(err => {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = refinedText;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                
+                alert('Refined prompt copied to clipboard!');
+            });
+        }
+
+        function useRefinedPrompt() {
+            const refinedText = document.getElementById('refinedPromptText').textContent;
+            document.getElementById('userPrompt').value = refinedText;
+            
+            // Scroll to input
+            document.getElementById('userPrompt').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Visual feedback
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '✅ Loaded!';
+            
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+            }, 2000);
+            
+            // Highlight the textarea briefly
+            const textarea = document.getElementById('userPrompt');
+            textarea.style.border = '3px solid #4caf50';
+            setTimeout(() => {
+                textarea.style.border = '2px solid #e0e0e0';
+            }, 1500);
+        }
+
+        function clearAll() {
+            document.getElementById('userPrompt').value = '';
+            document.getElementById('resultsDiv').classList.add('hidden');
+            document.getElementById('errorDiv').classList.add('hidden');
+            document.getElementById('timestamp').classList.add('hidden');
+            document.getElementById('userPrompt').focus();
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorDiv');
+            errorDiv.textContent = '❌ Error: ' + message;
+            errorDiv.classList.remove('hidden');
+            document.getElementById('resultsDiv').classList.add('hidden');
+        }
+
+        // Allow Enter key with Shift for newline, Enter alone to submit
+        document.getElementById('userPrompt').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                submitPrompt();
+            }
+        });
+    </script>
+</body>
+</html>
