@@ -182,10 +182,6 @@ def analyze_response_thinking(response_content):
     if any(word in response_content.lower() for word in reasoning_words):
         thinking.append("Response includes causal reasoning and explanations")
     
-    # Check for examples
-    if "example" in response_content.lower() or "for instance" in response_content.lower():
-        thinking.append("Response provides concrete examples")
-    
     # Check response length and detail
     word_count = len(response_content.split())
     if word_count > 200:
